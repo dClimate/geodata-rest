@@ -1,0 +1,33 @@
+"data": {
+    "geotype": "Wind",
+    "location": {
+        "type": "GeometryCollection"
+    }
+}
+
+"data": {
+    "geotype": "Wind",
+    "location": {
+        "type": "GeometryCollection",
+        "geometries": [
+            {
+                "type": "Point",
+                "coordinates": [
+                    111.85825,
+                    53.81343
+                ]
+            }
+        ]
+    },
+    "value": 11.1,
+    "source": "Google Earth Engine",
+    "quality": 5
+}
+db.geodata.find({ location: { $near: { $geometry: { type: "Point", coordinates: [
+                    -105.91320,
+                    35.68405
+                ]
+            }, $minDistance: 0, $maxDistance: 1000000
+        }
+    }
+})
