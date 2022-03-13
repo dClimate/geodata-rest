@@ -24,12 +24,19 @@ pub struct Auth {
 }
 
 #[derive(Debug, Clone, Deserialize)]
+pub struct Contract {
+  pub address: String,
+  pub admin: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
 pub struct Settings {
   pub environment: String,
   pub server: Server,
   pub logger: Logger,
   pub database: Database,
   pub auth: Auth,
+  pub contract: Contract,
 }
 
 impl Settings {

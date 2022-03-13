@@ -15,6 +15,8 @@
 * Data validation based on keccak-256 hashing, anchored on blockchain
 
 ### Demo
+* IMPORTANT: $CONTRACT_ADDRESS from geodata-anchor must be applied to src/config/default.json before starting
+ (see https://github.com/tsondru/geodata-anchor/README.md)
 * see README-demo.md for running demo curl commands
 
 ### TODO:

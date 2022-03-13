@@ -1,19 +1,29 @@
 use crate::context::Context;
 use crate::errors::Error;
+use crate::lib::models::ModelExt;
 use crate::lib::token::TokenAccount;
+// TODO: import this from geodata-anchor
+use crate::lib::msg;
 use crate::models::geodata;
 use crate::models::geodata::{Geodata, HashableGeodata, Location, PublicGeodata};
 use crate::models::validation::{Validation, Validity};
-use crate::lib::models::ModelExt;
 use axum::{
   extract::{Extension, Query},
   routing::{get, post},
   Json, Router,
 };
 use bson::doc;
+use cosmrs::{
+  cosmwasm::MsgExecuteContract,
+  crypto::secp256k1,
+  tx::{self, AccountNumber, Fee, Msg, SignDoc, SignerInfo},
+  AccountId, Coin
+};
+use cosmwasm_std::Timestamp;
 use serde::{Deserialize, Serialize};
-use wither::mongodb::options::FindOptions;
 use tracing::debug;
+use wither::mongodb::options::FindOptions;
+const DENOM: &str = "ujunox";
 
 #[derive(Serialize, Deserialize, Debug)]
 struct NearQueryParams {
@@ -54,14 +64,47 @@ async fn create_geodata(
   let geodata = context.models.geodata.create(geodata).await?;
   let oid = &geodata.id.unwrap();
   debug!("geodata.id (oid): {:?}", oid);
-  let id = &geodata.id.unwrap().to_hex();
-  debug!("geodata.id (str): {:?}", id);
+  let geodata_id = &geodata.id.unwrap().to_hex();
+  debug!("geodata.id (str): {:?}", geodata_id);
 
   let hashable = HashableGeodata::from(geodata.clone());
   let j_hashable = serde_json::to_string(&hashable).unwrap();
   debug!("j_hashable: {:?}", &j_hashable);
   let hash = geodata::hash_data(j_hashable).await?;
   debug!("hash: {}", &hash);
+
+  let amount = Coin {
+    amount: 100u8.into(),
+    denom: DENOM.parse().unwrap(),
+  };
+ 
+  let admin_account_id = context.settings.contract.admin
+    .parse::<AccountId>().unwrap();
+  let contract_account_id = context.settings.contract.address
+    .parse::<AccountId>().unwrap();
+  let nanos: u64 = geodata.created.to_chrono().timestamp_nanos() as u64;
+  let created = Timestamp::from_nanos(nanos); 
+
+  let create_msg = msg::CreateMsg {
+    id: geodata.id.unwrap().to_hex(),
+    account: geodata.account.to_hex(),
+    hash: hash.clone(),
+    created: created,
+  };
+
+  // Msg json encoded message to be passed to the contract
+  let create_msg_json = serde_json::to_string(&create_msg).unwrap();
+  // let create_b64: serde_json::Value = serde_json::from_str(&create_msg_json).unwrap();
+  // let mut msg: Vec<u8> = Vec::new();
+  let msg : Vec<u8> = serde_json::to_vec(&create_msg_json).unwrap();
+  let msg_execute = MsgExecuteContract {
+    sender: admin_account_id,
+    contract: contract_account_id,
+    msg: msg,
+    funds: vec![amount.clone()],
+  }
+  .to_any()
+  .unwrap();
 
   // create top level Validation doc for this geodata, and supply initial validity
   let validity = Validity::new(account.id, hash);
@@ -79,7 +122,7 @@ async fn query_geodata(
   let geodata = context
     .models
     .geodata
-    .find(doc! { }, limit)
+    .find(doc! {}, limit)
     .await?
     .into_iter()
     .map(Into::into)

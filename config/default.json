@@ -16,5 +16,10 @@
 
   "auth": {
     "secret": "secret"
+  },
+
+  "contract": {
+    "address": "juno14hj2tavq8fpesdwxxcu44rty3hh90vhujrvcmstl4zr3txmfvw9skjuwg8",
+    "admin": "juno16g2rahf5846rxzp3fwlswy08fz8ccuwk03k57y"
   }
 }

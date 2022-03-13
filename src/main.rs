@@ -6,7 +6,7 @@ use tower_http::{
   compression::CompressionLayer, propagate_header::PropagateHeaderLayer,
   sensitive_headers::SetSensitiveHeadersLayer, trace,
 };
-use tracing::info;
+use tracing::{info, debug};
 
 mod context;
 mod database;
@@ -72,7 +72,8 @@ async fn main() {
 
   let port = settings.server.port;
   let address = SocketAddr::from(([127, 0, 0, 1], port));
-
+  debug!("contract address: {}", settings.contract.address);
+  debug!("admin address: {}", settings.contract.admin);
   info!("listening on {}", &address);
 
   axum::Server::bind(&address)

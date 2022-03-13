@@ -3,3 +3,4 @@ pub mod date;
 pub mod models;
 pub mod token;
 pub mod hasher;
+pub mod msg;
