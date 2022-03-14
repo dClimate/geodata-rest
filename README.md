@@ -13,9 +13,10 @@
 * Error handling
 * [Polymorphic](https://docs.mongodb.com/manual/reference/geojson/#geometrycollection) [geospatial data and queries](https://docs.mongodb.com/manual/geospatial-queries/#geospatial-queries)  on [Mongodb Atlas](https://www.mongodb.com/atlas/database) with Replica Set support
 * Data validation based on keccak-256 hashing, anchored on blockchain
+* Contract messaging via [cosmrs](https://github.com/cosmos/cosmos-rust) (WIP)
 
 ### Demo
-* IMPORTANT: $CONTRACT_ADDRESS from geodata-anchor must be applied to src/config/default.json before starting
+* IMPORTANT: $CONTRACT_ADDRESS from geodata-anchor scripts/local_deploy.sh must be applied to src/config/default.json before starting
  (see https://github.com/tsondru/geodata-anchor/README.md)
 * see README-demo.md for running demo curl commands
 
