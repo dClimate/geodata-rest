@@ -15,6 +15,10 @@
 * Data validation based on keccak-256 hashing, anchored on blockchain
 * Contract messaging via [cosmrs](https://github.com/cosmos/cosmos-rust) (WIP)
 
+### Diagram
+
+![diagram](./assets/diagram.png)
+
 ### Demo
 * IMPORTANT: $CONTRACT_ADDRESS from geodata-anchor scripts/local_deploy.sh must be applied to src/config/default.json before starting
  (see https://github.com/tsondru/geodata-anchor/README.md)
