@@ -44,7 +44,10 @@ pub struct Location {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, WitherModel, Validate)]
-#[model(index(keys = r#"doc!{ "account": 1 }"#))]
+#[model(
+  index(keys=r#"doc!{ "account": 1 }"#),
+  index(keys=r#"doc!{ "location" : "2dsphere" }"#),
+)]
 pub struct Geodata {
   #[serde(rename = "_id", skip_serializing_if = "Option::is_none")]
   pub id: Option<ObjectId>,
