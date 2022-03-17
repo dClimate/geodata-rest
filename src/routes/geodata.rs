@@ -1,9 +1,9 @@
 use crate::context::Context;
 use crate::errors::Error;
-use crate::lib::models::ModelExt;
-use crate::lib::token::TokenAccount;
+use crate::common::models::ModelExt;
+use crate::common::token::TokenAccount;
 // TODO: import this from geodata-anchor
-use crate::lib::msg;
+use crate::common::msg;
 use crate::models::geodata;
 use crate::models::geodata::{Geodata, HashableGeodata, Location, PublicGeodata};
 use crate::models::validation::{Validation, Validity};
@@ -35,8 +35,8 @@ struct NearQueryParams {
   max: i32,
 }
 
-use crate::lib::token::ADMIN_PATH;
-use crate::lib::token::USER_PATH;
+use crate::common::token::ADMIN_PATH;
+use crate::common::token::USER_PATH;
 
 const CHAIN_ID: &str = "testing";
 

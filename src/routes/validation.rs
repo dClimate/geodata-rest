@@ -1,10 +1,10 @@
 use crate::context::Context;
 use crate::errors::Error;
-use crate::lib::token::TokenAccount;
+use crate::common::token::TokenAccount;
 use crate::models::geodata;
 use crate::models::geodata::{HashableGeodata};
 use crate::models::validation::{ValidationResult, ValidationResults, Validation, Validity};
-use crate::lib::models::ModelExt;
+use crate::common::models::ModelExt;
 use axum::{
   extract::{Extension},
   routing::get,
@@ -14,7 +14,7 @@ use bson::doc;
 use tracing::debug;
 use wither::mongodb::options::FindOptions;
 
-use crate::lib::token::VALIDATOR_PATH;
+use crate::common::token::VALIDATOR_PATH;
 
 pub fn create_route() -> Router {
   let validation_path = format!("{}{}", VALIDATOR_PATH, "/validation");

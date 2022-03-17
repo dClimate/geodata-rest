@@ -8,9 +8,9 @@ use wither::Model as WitherModel;
 
 use crate::database::Database;
 use crate::errors::Error;
-use crate::lib::date;
-use crate::lib::date::Date;
-use crate::lib::models::ModelExt;
+use crate::common::date;
+use crate::common::date::Date;
+use crate::common::models::ModelExt;
 
 #[derive(Clone)]
 pub struct Model {

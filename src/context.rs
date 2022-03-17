@@ -1,5 +1,5 @@
-use crate::Models;
-use crate::Settings;
+use crate::models::Models;
+use crate::settings::Settings;
 
 #[derive(Clone)]
 pub struct Context {

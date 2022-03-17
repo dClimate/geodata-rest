@@ -1,9 +1,9 @@
 pub mod account;
 pub mod geodata;
 pub mod validation;
-use crate::lib::models::ModelExt;
-use crate::Database;
-use crate::Error;
+use crate::common::models::ModelExt;
+use crate::database::Database;
+use crate::errors::Error;
 
 #[derive(Clone)]
 pub struct Models {

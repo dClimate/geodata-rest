@@ -11,7 +11,7 @@ use tracing::{info, debug};
 mod context;
 mod database;
 mod errors;
-mod lib;
+mod common;
 mod logger;
 mod models;
 mod routes;
@@ -19,7 +19,6 @@ mod settings;
 
 use context::Context;
 use database::Database;
-use errors::Error;
 use logger::Logger;
 use models::Models;
 use settings::Settings;

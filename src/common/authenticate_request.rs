@@ -8,11 +8,11 @@ use tracing::debug;
 use crate::context::Context;
 use crate::errors::AuthenticateError;
 use crate::errors::Error;
-use crate::lib::token;
-use crate::lib::token::TokenAccount;
-use crate::lib::token::ADMIN_PATH;
-use crate::lib::token::USER_PATH;
-use crate::lib::token::VALIDATOR_PATH;
+use crate::common::token;
+use crate::common::token::TokenAccount;
+use crate::common::token::ADMIN_PATH;
+use crate::common::token::USER_PATH;
+use crate::common::token::VALIDATOR_PATH;
 
 #[async_trait]
 impl<B> FromRequest<B> for TokenAccount
