@@ -163,7 +163,7 @@ fn create_msg(
   let create_msg = msg::CreateMsg {
     id: geodata.id.unwrap().to_hex(),
     account: geodata.account.to_hex(),
-    hash: String::from(hash),
+    hash: hash.to_string(),
     created: created,
   };
   // Msg json encoded message to be passed to the contract

@@ -8,5 +8,5 @@ pub fn hash(data: &str) -> String {
   let result = hasher.finalize_reset();
   let mut buf = [0u8; 64];
   let res: &str = base16ct::lower::encode_str(&result, &mut buf).unwrap();
-  return String::from(res);
+  return res.to_string();
 }
