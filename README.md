@@ -19,20 +19,20 @@
 
 ![diagram](./assets/diagram.png)
 
-### Demo
+### Dev
 * IMPORTANT: $CONTRACT_ADDRESS from geodata-anchor scripts/local_deploy.sh must be applied to src/config/default.json before starting
  (see https://github.com/tsondru/geodata-anchor/README.md)
-* see README-demo.md for running demo curl commands
+* see README-dev.md for running dev curl commands
 
 ### TODO:
-* promote Roles from string array to struct/collection model
 * Add integration test layer with sample data (current test is an axum example)
+* Complete create_msg/send_msg to contract from src/routes/geodata/create_geodata and test
+
+### Next steps:
 * Consider replacing bcrypt with argon2
 * Consider [multi-hash](https://github.com/multiformats/rust-multihash)
 * Move validation endpoint to externally scheduled daemon process
 * Implement Docker runtimes
-
-### Next steps:
 * Design and implement geospatial data schemas, indexes and queries, input process
 * Implement external juno test blockchain for anchoring/validation
 * Client app integrating above functionality

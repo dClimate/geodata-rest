@@ -4,13 +4,14 @@ use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 
 use crate::models::account::Account;
+use crate::models::role::Role;
 
 type TokenResult = Result<TokenData<Claims>, Error>;
 
 // TODO: move these to enum struct
-pub static ADMIN_PATH: &str = "/6a2dda";
-pub static VALIDATOR_PATH: &str = "/5be0da";
-pub static USER_PATH: &str = "/6b0866";
+pub const ADMIN_PATH: &str = "/6a2dda";
+pub const VALIDATOR_PATH: &str = "/5be0da";
+pub const USER_PATH: &str = "/6b0866";
 
 static VALIDATION: Lazy<Validation> = Lazy::new(Validation::default);
 static HEADER: Lazy<Header> = Lazy::new(Header::default);
@@ -20,7 +21,7 @@ pub struct TokenAccount {
   pub id: ObjectId,
   pub name: String,
   pub email: String,
-  pub roles: Vec<String>,
+  pub roles: Vec<Role>,
 }
 
 impl From<Account> for TokenAccount {

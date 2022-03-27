@@ -11,6 +11,7 @@ use crate::errors::Error;
 use crate::common::date;
 use crate::common::date::Date;
 use crate::common::models::ModelExt;
+use crate::models::role::Role;
 
 #[derive(Clone)]
 pub struct Model {
@@ -40,21 +41,21 @@ pub struct Account {
   #[validate(email)]
   pub email: String,
   pub password: String,
-  pub roles: Vec<String>,
+  pub roles: Vec<Role>,
   pub updated_at: Date,
   pub created_at: Date,
   pub locked_at: Option<Date>,
 }
 
 impl Account {
-  pub fn new(name: String, email: String, password_hash: String, roles: Vec<String>) -> Self {
+  pub fn new(name: String, email: String, password_hash: String, roles: Vec<Role>) -> Self {
     let now = date::now();
     Self {
       id: None,
       name,
       email,
       password: password_hash,
-      roles: roles,
+      roles,
       updated_at: now,
       created_at: now,
       locked_at: None,
@@ -72,7 +73,7 @@ pub struct PublicAccount {
   pub id: ObjectId,
   pub name: String,
   pub email: String,
-  pub roles: Vec<String>,
+  pub roles: Vec<Role>,
   #[serde(with = "bson_datetime_as_rfc3339_string")]
   pub updated_at: Date,
   #[serde(with = "bson_datetime_as_rfc3339_string")]
@@ -85,7 +86,7 @@ impl From<Account> for PublicAccount {
       id: account.id.unwrap(),
       name: account.name.clone(),
       email: account.email.clone(),
-      roles: account.roles.clone(),
+      roles: account.roles,
       updated_at: account.updated_at,
       created_at: account.created_at,
     }

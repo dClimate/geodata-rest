@@ -4,6 +4,7 @@ use geodata_rest::models::Models;
 use geodata_rest::settings::Settings;
 use std::env;
 
+#[allow(dead_code)]
 pub async fn get_context() -> Context {
     env::set_var("RUN_MODE", "test");
     let settings = match Settings::new() {

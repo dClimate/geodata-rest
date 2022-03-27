@@ -8,28 +8,27 @@ use crate::errors::BadRequest;
 use crate::errors::NotFound;
 use crate::errors::{AuthenticateError, Error};
 use crate::common::token;
-use crate::models::account;
-use crate::models::account::{PublicAccount, Account};
+use crate::models::account::{self, PublicAccount, Account};
 use crate::common::models::ModelExt;
 
 pub fn create_route() -> Router {
   Router::new()
   //TODO: remove this route
-    .route("/9f7b1ef8134d9c462d39e24212368aa8d5341c6e/accounts", post(create_account))
+    // .route("/9f7b1ef8134d9c462d39e24212368aa8d5341c6e/accounts", post(create_account))
     .route("/accounts/authenticate", post(authenticate_account))
 }
 
-async fn create_account(
-  Extension(context): Extension<Context>,
-  Json(body): Json<CreateBody>,
-) -> Result<Json<PublicAccount>, Error> {
-  let password_hash = account::hash_password(body.password).await?;
-  let account = Account::new(body.name, body.email, password_hash, body.roles);
-  let account = context.models.account.create(account).await?;
-  let res = PublicAccount::from(account);
+// async fn create_account(
+//   Extension(context): Extension<Context>,
+//   Json(body): Json<CreateBody>,
+// ) -> Result<Json<PublicAccount>, Error> {
+//   let password_hash = account::hash_password(body.password).await?;
+//   let account = Account::new(body.name, body.email, password_hash, body.roles);
+//   let account = context.models.account.create(account).await?;
+//   let res = PublicAccount::from(account);
 
-  Ok(Json(res))
-}
+//   Ok(Json(res))
+// }
 
 async fn authenticate_account(
   Extension(context): Extension<Context>,
@@ -59,7 +58,7 @@ async fn authenticate_account(
     .account
     .find_one(doc! { "email": email }, None)
     .await?;
-
+    
   let account = match account {
     Some(account) => account,
     None => {
