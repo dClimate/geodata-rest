@@ -1,43 +1,47 @@
-use axum::extract::Extension;
-use axum::{handler::Handler, http::StatusCode, response::IntoResponse, Router};
-use geodata_rest::models::account::{self, Account};
+//! tests workflow:
+//! authorization: admin, user, validator
+//! routes for above based on role permissions
+use axum::{
+  extract::Extension, Router,
+};
+use geodata_rest::context::Context;
+use geodata_rest::models::account::PublicAccount;
 use geodata_rest::routes;
 use http::header;
-use std::error::Error;
-use std::net::SocketAddr;
-use tower_http::{compression::CompressionLayer, propagate_header::PropagateHeaderLayer};
+use serde::{Deserialize, Serialize};
+use tower_http::{
+  compression::CompressionLayer, propagate_header::PropagateHeaderLayer,
+  sensitive_headers::SetSensitiveHeadersLayer, trace,
+};
 mod common;
 use common::*;
 
-#[tokio::main]
-async fn main() {
-  let context = get_context().await;
-  let app = Router::new()
+#[allow(dead_code)]
+fn app(context: Context) -> Router {
+  Router::new()
     .merge(routes::account::create_route())
     .merge(routes::geodata::create_route())
     .merge(routes::validation::create_route())
-    .fallback(handler_404.into_service())
+    // High level logging of requests and responses
+    .layer(
+      trace::TraceLayer::new_for_http()
+        .make_span_with(trace::DefaultMakeSpan::new().include_headers(true))
+        .on_request(trace::DefaultOnRequest::new().level(tracing::Level::INFO))
+        .on_response(trace::DefaultOnResponse::new().level(tracing::Level::INFO)),
+    )
+    // Mark the `Authorization` request header as sensitive so it doesn't
+    // show in logs.
+    .layer(SetSensitiveHeadersLayer::new(std::iter::once(
+      header::AUTHORIZATION,
+    )))
     // Compress responses
     .layer(CompressionLayer::new())
     // Propagate `X-Request-Id`s from requests to responses
     .layer(PropagateHeaderLayer::new(header::HeaderName::from_static(
       "x-request-id",
     )))
-    .layer(Extension(context));
-
-  let port = 8080;
-  let address = SocketAddr::from(([127, 0, 0, 1], port));
-
-  axum::Server::bind(&address)
-    .serve(app.into_make_service())
-    .await
-    .expect("Failed to start server");
+    .layer(Extension(context))
 }
-
-async fn handler_404() -> impl IntoResponse {
-  (StatusCode::NOT_FOUND, "Not found")
-}
-
 #[cfg(test)]
 mod tests {
   use super::*;
@@ -45,28 +49,68 @@ mod tests {
     body::Body,
     http::{self, Request, StatusCode},
   };
-  use serde_json::{json, Value};
+  use serde_json::json;
   use std::net::{SocketAddr, TcpListener};
-  use tower::ServiceExt; // for `app.oneshot()`
 
   #[tokio::test]
-  async fn test_auth() {
+  async fn test_workflow() {
+    let context = get_testdb_context().await;
+    initialize_testdb(&context).await.unwrap();
     let listener = TcpListener::bind("0.0.0.0:0".parse::<SocketAddr>().unwrap()).unwrap();
     let addr = listener.local_addr().unwrap();
+    // let addr = std::net::SocketAddr::from(([127, 0, 0, 1], 8080));
+
+    tokio::spawn(async move {
+      axum::Server::from_tcp(listener)
+        .unwrap()
+        .serve(app(context).into_make_service())
+        .await
+        .unwrap();
+    });
 
     let client = hyper::Client::new();
+    let body = AuthorizeBody {
+      email: "admin@test.com".to_string(),
+      password: "test".to_string(),
+    };
 
     let response = client
       .request(
         Request::builder()
-          .uri(format!("http://{}", addr))
-          .body(Body::empty())
+          .method(http::Method::POST)
+          .uri(format!("http://{}/accounts/authenticate", addr))
+          .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+          .body(Body::from(serde_json::to_vec(&json!(body)).unwrap()))
           .unwrap(),
       )
       .await
       .unwrap();
 
+    assert_eq!(response.status(), StatusCode::OK);
     let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-    assert_eq!(&body[..], b"Hello, World!");
+    let body = String::from_utf8(body.to_vec()).unwrap();
+    let res: AuthenticateResponse = serde_json::from_str(&body).unwrap();
+
+    //TODO:
+    // Provide test with invalid pw
+    // call post /geodata without token
+    // call post /geodata with token
+    let admin_token = res.access_token;
+    assert_eq!(res.account.name, "admin".to_string());
+    //TODO:
+    // Add auth for user and validator accounts
+    // call gets for user
+    // call get for validator
   }
+}
+#[derive(Debug, Serialize)]
+struct AuthorizeBody {
+  email: String,
+  password: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct AuthenticateResponse {
+  access_token: String,
+  account: PublicAccount,
 }

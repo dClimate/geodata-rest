@@ -1,4 +1,4 @@
-db = connect('mongodb://localhost/geomancy');
+db = connect('mongodb://localhost/test');
 printjson(
     db.geodata.find({
     location: {
