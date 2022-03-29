@@ -1,14 +1,14 @@
 //! tests workflow:
 //! authorization: admin, user, validator
 //! routes for above based on role permissions
-use bson::oid::ObjectId;
 use axum::{extract::Extension, Router};
+use bson::oid::ObjectId;
 use geodata_rest::common::token::ADMIN_PATH;
 use geodata_rest::context::Context;
+use geodata_rest::logger::Logger;
 use geodata_rest::models::account::PublicAccount;
 use geodata_rest::models::geodata::{Geometry, Location, PublicGeodata};
 use geodata_rest::routes;
-use geodata_rest::logger::Logger;
 use http::header;
 use serde::{Deserialize, Serialize};
 use tower_http::{
@@ -63,7 +63,6 @@ mod tests {
     initialize_testdb(&context).await.unwrap();
     let listener = TcpListener::bind("0.0.0.0:0".parse::<SocketAddr>().unwrap()).unwrap();
     let addr = listener.local_addr().unwrap();
-    // let addr = std::net::SocketAddr::from(([127, 0, 0, 1], 8080));
 
     tokio::spawn(async move {
       axum::Server::from_tcp(listener)
@@ -74,9 +73,10 @@ mod tests {
     });
 
     let client = hyper::Client::new();
-    let body = AuthorizeBody {
+    // test: invalid password
+    let mut body = AuthorizeBody {
       email: "admin@test.com".to_string(),
-      password: "test".to_string(),
+      password: "invalid".to_string(),
     };
 
     let response = client
@@ -91,16 +91,29 @@ mod tests {
       .await
       .unwrap();
 
+    assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+
+    // test: valid password
+    body.password = "test".to_string();
+
+    let response = client
+      .request(
+        Request::builder()
+          .method(http::Method::POST)
+          .uri(format!("http://{}/accounts/authenticate", addr))
+          .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+          .body(Body::from(serde_json::to_vec(&json!(body)).unwrap()))
+          .unwrap(),
+      )
+      .await
+      .unwrap();
     assert_eq!(response.status(), StatusCode::OK);
-    let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-    let body: Value = serde_json::from_slice(&body).unwrap();
-    let res: AuthenticateResponse = serde_json::from_value(body).unwrap();
+    let res_body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+    let res_body: Value = serde_json::from_slice(&res_body).unwrap();
+    let res: AuthenticateResponse = serde_json::from_value(res_body).unwrap();
 
     assert_eq!(res.account.name, "admin".to_string());
 
-    //TODO:
-    // Provide test with invalid pw
-    // call post /geodata without token
     let admin_token = res.access_token;
     let admin_id = res.account.id;
 
@@ -125,7 +138,7 @@ mod tests {
     };
 
     let admin_auth_bearer = format!("Bearer {}", admin_token);
-
+    // test: call post /geodata valid token
     let response = client
       .request(
         Request::builder()
@@ -140,10 +153,30 @@ mod tests {
       .unwrap();
 
     assert_eq!(response.status(), StatusCode::OK);
-    let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-    let body: Value = serde_json::from_slice(&body).unwrap();
-    let res: PublicGeodata = serde_json::from_value(body).unwrap();
+    let res_body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+    let res_body: Value = serde_json::from_slice(&res_body).unwrap();
+    let res: PublicGeodata = serde_json::from_value(res_body).unwrap();
     assert_eq!(res.account, admin_id);
+
+    // test: call post /geodata without token (UNAUTHORIZED)
+    let response = client
+      .request(
+        Request::builder()
+          .method(http::Method::POST)
+          .uri(format!("http://{}{}/geodata", addr, ADMIN_PATH))
+          .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+          .body(Body::from(serde_json::to_vec(&json!(&body)).unwrap()))
+          .unwrap(),
+      )
+      .await
+      .unwrap();
+
+    assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+    let res_body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+    let res_body = String::from_utf8(res_body.to_vec()).unwrap();
+    let error: Value = serde_json::from_str(&res_body).unwrap();
+    assert_eq!(error["message"], "Invalid authentication credentials");
+
     //TODO:
     // Add auth for user and validator accounts
     // call gets for user
