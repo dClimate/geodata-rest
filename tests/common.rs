@@ -36,9 +36,20 @@ pub async fn get_testdb_context() -> Context {
 
 #[allow(dead_code)]
 pub async fn initialize_testdb(context: &Context) -> Result<(), Box<dyn Error>> {
+  // clear db
+  context.models.geodata.delete_many(doc! {}).await?;
+  assert_eq!(context.models.geodata.count(doc! {}).await?, 0);
+
+  context.models.validation.delete_many(doc! {}).await?;
+  assert_eq!(context.models.validation.count(doc! {}).await?, 0);
+
   context.models.role.delete_many(doc! {}).await?;
   assert_eq!(context.models.role.count(doc! {}).await?, 0);
 
+  context.models.account.delete_many(doc! {}).await?;
+  assert_eq!(context.models.account.count(doc! {}).await?, 0);
+
+  // create roles
   let role_user = Role::new("user".to_string());
   let role_user = context.models.role.create(role_user).await?;
   let role_admin = Role::new("admin".to_string());
@@ -47,9 +58,7 @@ pub async fn initialize_testdb(context: &Context) -> Result<(), Box<dyn Error>> 
   let role_validator = context.models.role.create(role_validator).await?;
   assert_eq!(context.models.role.count(doc! {}).await?, 3);
 
-  context.models.account.delete_many(doc! {}).await?;
-  assert_eq!(context.models.account.count(doc! {}).await?, 0);
-
+  // create users
   let password_hash = account::hash_password("test").await?;
   let admin = Account::new(
     "admin".to_string(),

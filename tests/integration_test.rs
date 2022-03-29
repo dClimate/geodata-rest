@@ -1,24 +1,28 @@
 //! tests workflow:
 //! authorization: admin, user, validator
 //! routes for above based on role permissions
-use axum::{
-  extract::Extension, Router,
-};
+use bson::oid::ObjectId;
+use axum::{extract::Extension, Router};
+use geodata_rest::common::token::ADMIN_PATH;
 use geodata_rest::context::Context;
 use geodata_rest::models::account::PublicAccount;
-use geodata_rest::models::geodata::{Geometry, Location};
+use geodata_rest::models::geodata::{Geometry, Location, PublicGeodata};
 use geodata_rest::routes;
+use geodata_rest::logger::Logger;
 use http::header;
 use serde::{Deserialize, Serialize};
 use tower_http::{
   compression::CompressionLayer, propagate_header::PropagateHeaderLayer,
   sensitive_headers::SetSensitiveHeadersLayer, trace,
 };
+
 mod common;
 use common::*;
+use tracing::debug;
 
 #[allow(dead_code)]
 fn app(context: Context) -> Router {
+  Logger::setup(&context.settings);
   Router::new()
     .merge(routes::account::create_route())
     .merge(routes::geodata::create_route())
@@ -92,12 +96,54 @@ mod tests {
     let body: Value = serde_json::from_slice(&body).unwrap();
     let res: AuthenticateResponse = serde_json::from_value(body).unwrap();
 
+    assert_eq!(res.account.name, "admin".to_string());
+
     //TODO:
     // Provide test with invalid pw
     // call post /geodata without token
-    // call post /geodata with token
     let admin_token = res.access_token;
-    assert_eq!(res.account.name, "admin".to_string());
+    let admin_id = res.account.id;
+
+    // build post /geodata request body
+    let geometry = Geometry {
+      r#type: "Point".to_string(),
+      coordinates: vec![-73.91320, 40.68405],
+    };
+
+    let location = Location {
+      r#type: "GeometryCollection".to_string(),
+      geometries: vec![geometry],
+    };
+
+    let body = CreateGeodata {
+      account: res.account.id,
+      location,
+      geotype: "Wind".to_string(),
+      value: 11.1,
+      source: "Google Earth Engine".to_string(),
+      quality: 5,
+    };
+
+    let admin_auth_bearer = format!("Bearer {}", admin_token);
+
+    let response = client
+      .request(
+        Request::builder()
+          .method(http::Method::POST)
+          .uri(format!("http://{}{}/geodata", addr, ADMIN_PATH))
+          .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+          .header(http::header::AUTHORIZATION, admin_auth_bearer)
+          .body(Body::from(serde_json::to_vec(&json!(body)).unwrap()))
+          .unwrap(),
+      )
+      .await
+      .unwrap();
+
+    assert_eq!(response.status(), StatusCode::OK);
+    let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+    let body: Value = serde_json::from_slice(&body).unwrap();
+    let res: PublicGeodata = serde_json::from_value(body).unwrap();
+    assert_eq!(res.account, admin_id);
     //TODO:
     // Add auth for user and validator accounts
     // call gets for user
@@ -118,6 +164,7 @@ struct AuthenticateResponse {
 
 #[derive(Serialize, Deserialize, Debug)]
 struct CreateGeodata {
+  account: ObjectId,
   location: Location,
   geotype: String,
   value: f64,
