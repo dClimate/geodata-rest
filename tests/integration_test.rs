@@ -6,6 +6,7 @@ use axum::{
 };
 use geodata_rest::context::Context;
 use geodata_rest::models::account::PublicAccount;
+use geodata_rest::models::geodata::{Geometry, Location};
 use geodata_rest::routes;
 use http::header;
 use serde::{Deserialize, Serialize};
@@ -49,7 +50,7 @@ mod tests {
     body::Body,
     http::{self, Request, StatusCode},
   };
-  use serde_json::json;
+  use serde_json::{json, Value};
   use std::net::{SocketAddr, TcpListener};
 
   #[tokio::test]
@@ -88,8 +89,8 @@ mod tests {
 
     assert_eq!(response.status(), StatusCode::OK);
     let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-    let body = String::from_utf8(body.to_vec()).unwrap();
-    let res: AuthenticateResponse = serde_json::from_str(&body).unwrap();
+    let body: Value = serde_json::from_slice(&body).unwrap();
+    let res: AuthenticateResponse = serde_json::from_value(body).unwrap();
 
     //TODO:
     // Provide test with invalid pw
@@ -113,4 +114,13 @@ struct AuthorizeBody {
 struct AuthenticateResponse {
   access_token: String,
   account: PublicAccount,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+struct CreateGeodata {
+  location: Location,
+  geotype: String,
+  value: f64,
+  source: String,
+  quality: i32,
 }
