@@ -1,6 +1,9 @@
 //! tests workflow:
 //! authorization: admin, user, validator
 //! routes for above based on role permissions
+//! Admin authenticates and creates geodata instance
+//! User authenticates and queries all geodata then issues a "near" query
+//! Validator authenticates and runs validation
 use axum::{extract::Extension, Router};
 use bson::{doc, oid::ObjectId};
 use geodata_rest::common::models::ModelExt;
@@ -9,7 +12,8 @@ use geodata_rest::context::Context;
 use geodata_rest::logger::Logger;
 use geodata_rest::models::account::PublicAccount;
 use geodata_rest::models::geodata::{Geometry, Location, PublicGeodata};
-use geodata_rest::routes::{self, geodata::NearQueryParams};
+use geodata_rest::models::validation::ValidationResults;
+use geodata_rest::routes;
 use http::header;
 use serde::{Deserialize, Serialize};
 use tower_http::{
@@ -168,7 +172,7 @@ mod tests {
     // create geodata also creates initial validation
     // future validations will create hash and compare with original hash
     assert_eq!(validation_model.count(doc! {}).await.unwrap(), 1u64);
-    let validations = validation_model.find(doc! {}, limit).await.unwrap();
+    let validations = validation_model.find(doc! {}, limit.clone()).await.unwrap();
     // initial validation/validity by admin
     assert_eq!(validations[0].validities[0].account, admin_id);
     assert_eq!(validations[0].validities.len(), 1);
@@ -235,19 +239,13 @@ mod tests {
     let res: Vec<PublicGeodata> = serde_json::from_value(res_body).unwrap();
     assert_eq!(res.len(), 1);
 
-    let params = NearQueryParams {
-      lon: -73.91320,
-      lat: 40.68405,
-      min: 0,
-      max: 10000,
-    };
-
+    // test: get geodata/near for user
     let response = client
       .request(
         Request::builder()
           .uri(format!(
-            "http://{}{}/geodata/near?lon={}&lat={}&min={}&max={}",
-            addr, USER_PATH, params.lon, params.lat, params.min, params.max
+            "http://{}{}/geodata/near?lon=-73.91320&lat=40.68405&min=0&max=10000",
+            addr, USER_PATH
           ))
           .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
           .header(http::header::AUTHORIZATION, &auth_bearer)
@@ -261,10 +259,78 @@ mod tests {
     let res_body: Value = serde_json::from_slice(&res_body).unwrap();
     let res: Vec<PublicGeodata> = serde_json::from_value(res_body).unwrap();
     assert_eq!(res.len(), 1);
-    // Add auth for validator account
-    // call get for validator
+
+    // test: authenticate validator with valid password
+    let body = AuthorizeBody {
+      email: "validator@test.com".to_string(),
+      password: "test".to_string(),
+    };
+    let response = client
+      .request(
+        Request::builder()
+          .method(http::Method::POST)
+          .uri(format!("http://{}/accounts/authenticate", addr))
+          .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+          .body(Body::from(serde_json::to_vec(&json!(body)).unwrap()))
+          .unwrap(),
+      )
+      .await
+      .unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+    let res_body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+    let res_body: Value = serde_json::from_slice(&res_body).unwrap();
+    let res: AuthenticateResponse = serde_json::from_value(res_body).unwrap();
+
+    assert_eq!(res.account.name, "validator".to_string());
+    let validator_token = res.access_token;
+    let validator_id = res.account.id;
+
+    // test: get validation for validator
+    let auth_bearer = format!("Bearer {}", validator_token);
+    let response = client
+      .request(
+        Request::builder()
+          .uri(format!("http://{}{}/validation", addr, VALIDATOR_PATH))
+          .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+          .header(http::header::AUTHORIZATION, &auth_bearer)
+          .body(Body::empty())
+          .unwrap(),
+      )
+      .await
+      .unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+    let res_body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+    let res_body: Value = serde_json::from_slice(&res_body).unwrap();
+    // returns results of all validations
+    let validations: ValidationResults = serde_json::from_value(res_body).unwrap();
+    assert_eq!(validations.results.len(), 1);
+
+    // validation succeeded but hash not shown
+    assert_eq!(validations.results[0].validated, true);
+    assert_eq!(validation_model.count(doc! {}).await.unwrap(), 1u64);
+    
+    // one validation instance for each geodata instance, with multiple validities
+    let validations = validation_model.find(doc! {}, limit).await.unwrap();
+
+    // this validation process created another validity for
+    // the geodata instance within same validation instance
+    assert_eq!(validations[0].validities.len(), 2);
+
+    // original validity by admin
+    assert_eq!(validations[0].validities[0].account, admin_id);
+
+    // this validity by validator
+    assert_eq!(validations[0].validities[1].account, validator_id);
+
+    // hash from this validation matches hash from original validation
+    // i.e. validation suceeded
+    assert_eq!(
+      validations[0].validities[0].hash,
+      validations[0].validities[1].hash
+    );
   }
 }
+
 #[derive(Debug, Serialize)]
 struct AuthorizeBody {
   email: String,

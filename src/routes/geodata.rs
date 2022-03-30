@@ -1,7 +1,7 @@
-use crate::context::Context;
-use crate::errors::Error;
 use crate::common::models::ModelExt;
 use crate::common::token::TokenAccount;
+use crate::context::Context;
+use crate::errors::Error;
 // TODO: import this from geodata-anchor
 use crate::common::msg;
 use crate::models::geodata;
@@ -17,7 +17,7 @@ use cosmrs::{
   cosmwasm::MsgExecuteContract,
   crypto::secp256k1,
   tx::{self, Fee, Msg, SignDoc, SignerInfo},
-  AccountId, Coin, Any
+  AccountId, Any, Coin,
 };
 use cosmwasm_std::Timestamp;
 use serde::{Deserialize, Serialize};
@@ -28,14 +28,14 @@ const DENOM: &str = "ujunox";
 const RPC_PORT: u16 = 26657;
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct NearQueryParams {
-  pub lon: f32,
-  pub lat: f32,
-  pub min: i32,
-  pub max: i32,
+struct NearQueryParams {
+  lon: f32,
+  lat: f32,
+  min: i32,
+  max: i32,
 }
 
-use crate::common::token::{USER_PATH, ADMIN_PATH};
+use crate::common::token::{ADMIN_PATH, USER_PATH};
 
 const CHAIN_ID: &str = "testing";
 
@@ -134,11 +134,7 @@ async fn get_geodata_near(
   Ok(Json(geodata))
 }
 
-fn create_msg(
-  hash: &str,
-  geodata: Geodata,
-  context: Context,
-) -> Result<Any, Error> {
+fn create_msg(hash: &str, geodata: Geodata, context: Context) -> Result<Any, Error> {
   let amount = Coin {
     amount: 100u8.into(),
     denom: DENOM.parse().unwrap(),
@@ -201,7 +197,6 @@ fn create_msg(
 //   let tx_raw = sign_doc.sign(&sender_private_key).unwrap();
 //   // etc.
 // }
-
 
 #[derive(Serialize, Deserialize, Debug)]
 struct CreateGeodata {
