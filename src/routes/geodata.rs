@@ -28,15 +28,14 @@ const DENOM: &str = "ujunox";
 const RPC_PORT: u16 = 26657;
 
 #[derive(Serialize, Deserialize, Debug)]
-struct NearQueryParams {
-  lon: f32,
-  lat: f32,
-  min: i32,
-  max: i32,
+pub struct NearQueryParams {
+  pub lon: f32,
+  pub lat: f32,
+  pub min: i32,
+  pub max: i32,
 }
 
-use crate::common::token::ADMIN_PATH;
-use crate::common::token::USER_PATH;
+use crate::common::token::{USER_PATH, ADMIN_PATH};
 
 const CHAIN_ID: &str = "testing";
 

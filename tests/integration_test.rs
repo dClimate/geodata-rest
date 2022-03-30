@@ -2,13 +2,14 @@
 //! authorization: admin, user, validator
 //! routes for above based on role permissions
 use axum::{extract::Extension, Router};
-use bson::oid::ObjectId;
-use geodata_rest::common::token::ADMIN_PATH;
+use bson::{doc, oid::ObjectId};
+use geodata_rest::common::models::ModelExt;
+use geodata_rest::common::token::{ADMIN_PATH, USER_PATH, VALIDATOR_PATH};
 use geodata_rest::context::Context;
 use geodata_rest::logger::Logger;
 use geodata_rest::models::account::PublicAccount;
 use geodata_rest::models::geodata::{Geometry, Location, PublicGeodata};
-use geodata_rest::routes;
+use geodata_rest::routes::{self, geodata::NearQueryParams};
 use http::header;
 use serde::{Deserialize, Serialize};
 use tower_http::{
@@ -56,13 +57,18 @@ mod tests {
   };
   use serde_json::{json, Value};
   use std::net::{SocketAddr, TcpListener};
+  use wither::mongodb::options::FindOptions;
 
   #[tokio::test]
   async fn test_workflow() {
+    let limit = FindOptions::builder().limit(10).build();
+
     let context = get_testdb_context().await;
     initialize_testdb(&context).await.unwrap();
     let listener = TcpListener::bind("0.0.0.0:0".parse::<SocketAddr>().unwrap()).unwrap();
     let addr = listener.local_addr().unwrap();
+
+    let validation_model = context.models.validation.clone();
 
     tokio::spawn(async move {
       axum::Server::from_tcp(listener)
@@ -73,7 +79,7 @@ mod tests {
     });
 
     let client = hyper::Client::new();
-    // test: invalid password
+    // test: authenticate admin with invalid password
     let mut body = AuthorizeBody {
       email: "admin@test.com".to_string(),
       password: "invalid".to_string(),
@@ -93,7 +99,7 @@ mod tests {
 
     assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
 
-    // test: valid password
+    // test: authenticate admin with valid password
     body.password = "test".to_string();
 
     let response = client
@@ -137,15 +143,17 @@ mod tests {
       quality: 5,
     };
 
-    let admin_auth_bearer = format!("Bearer {}", admin_token);
-    // test: call post /geodata valid token
+    // no validations yet
+    assert_eq!(validation_model.count(doc! {}).await.unwrap(), 0u64);
+    let auth_bearer = format!("Bearer {}", admin_token);
+    // test: call post /geodata as admin with valid token
     let response = client
       .request(
         Request::builder()
           .method(http::Method::POST)
           .uri(format!("http://{}{}/geodata", addr, ADMIN_PATH))
           .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-          .header(http::header::AUTHORIZATION, admin_auth_bearer)
+          .header(http::header::AUTHORIZATION, auth_bearer)
           .body(Body::from(serde_json::to_vec(&json!(body)).unwrap()))
           .unwrap(),
       )
@@ -157,6 +165,13 @@ mod tests {
     let res_body: Value = serde_json::from_slice(&res_body).unwrap();
     let res: PublicGeodata = serde_json::from_value(res_body).unwrap();
     assert_eq!(res.account, admin_id);
+    // create geodata also creates initial validation
+    // future validations will create hash and compare with original hash
+    assert_eq!(validation_model.count(doc! {}).await.unwrap(), 1u64);
+    let validations = validation_model.find(doc! {}, limit).await.unwrap();
+    // initial validation/validity by admin
+    assert_eq!(validations[0].validities[0].account, admin_id);
+    assert_eq!(validations[0].validities.len(), 1);
 
     // test: call post /geodata without token (UNAUTHORIZED)
     let response = client
@@ -177,9 +192,76 @@ mod tests {
     let error: Value = serde_json::from_str(&res_body).unwrap();
     assert_eq!(error["message"], "Invalid authentication credentials");
 
-    //TODO:
-    // Add auth for user and validator accounts
-    // call gets for user
+    // test: authenticate user with valid password
+    let body = AuthorizeBody {
+      email: "user@test.com".to_string(),
+      password: "test".to_string(),
+    };
+    let response = client
+      .request(
+        Request::builder()
+          .method(http::Method::POST)
+          .uri(format!("http://{}/accounts/authenticate", addr))
+          .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+          .body(Body::from(serde_json::to_vec(&json!(body)).unwrap()))
+          .unwrap(),
+      )
+      .await
+      .unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+    let res_body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+    let res_body: Value = serde_json::from_slice(&res_body).unwrap();
+    let res: AuthenticateResponse = serde_json::from_value(res_body).unwrap();
+
+    assert_eq!(res.account.name, "user".to_string());
+    let user_token = res.access_token;
+
+    // test: get geodata for user
+    let auth_bearer = format!("Bearer {}", user_token);
+    let response = client
+      .request(
+        Request::builder()
+          .uri(format!("http://{}{}/geodata", addr, USER_PATH))
+          .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+          .header(http::header::AUTHORIZATION, &auth_bearer)
+          .body(Body::empty())
+          .unwrap(),
+      )
+      .await
+      .unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+    let res_body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+    let res_body: Value = serde_json::from_slice(&res_body).unwrap();
+    let res: Vec<PublicGeodata> = serde_json::from_value(res_body).unwrap();
+    assert_eq!(res.len(), 1);
+
+    let params = NearQueryParams {
+      lon: -73.91320,
+      lat: 40.68405,
+      min: 0,
+      max: 10000,
+    };
+
+    let response = client
+      .request(
+        Request::builder()
+          .uri(format!(
+            "http://{}{}/geodata/near?lon={}&lat={}&min={}&max={}",
+            addr, USER_PATH, params.lon, params.lat, params.min, params.max
+          ))
+          .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+          .header(http::header::AUTHORIZATION, &auth_bearer)
+          .body(Body::empty())
+          .unwrap(),
+      )
+      .await
+      .unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+    let res_body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+    let res_body: Value = serde_json::from_slice(&res_body).unwrap();
+    let res: Vec<PublicGeodata> = serde_json::from_value(res_body).unwrap();
+    assert_eq!(res.len(), 1);
+    // Add auth for validator account
     // call get for validator
   }
 }
