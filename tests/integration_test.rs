@@ -305,7 +305,7 @@ mod tests {
     let validations: ValidationResults = serde_json::from_value(res_body).unwrap();
     assert_eq!(validations.results.len(), 1);
 
-    // validation succeeded but hash not shown
+    // validation succeeded but hash not returned
     assert_eq!(validations.results[0].validated, true);
     assert_eq!(validation_model.count(doc! {}).await.unwrap(), 1u64);
     

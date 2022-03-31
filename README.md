@@ -25,7 +25,6 @@
 * see README-dev.md for running dev curl commands
 
 ### TODO:
-* Add integration test layer with sample data (current test is an axum example)
 * Complete create_msg/send_msg to contract from src/routes/geodata/create_geodata and test
 
 ### Next steps:
