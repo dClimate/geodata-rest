@@ -3,6 +3,7 @@ use axum::{
   extract::{FromRequest, RequestParts, TypedHeader},
   headers::{authorization::Bearer, Authorization},
 };
+use http::Extensions;
 use tracing::debug;
 
 use crate::context::Context;
@@ -28,8 +29,13 @@ where
         .map_err(|_| AuthenticateError::InvalidToken)?;
     debug!("from_request");
     let extensions = req.extensions().ok_or(Error::ReadContext)?;
+
+    // axum 5.1 breaking
+    // let extensions = req.extensions().get::<Extensions>().ok_or(Error::ReadContext)?;
+    debug!("extensions: {:?}", extensions);
     let context = extensions.get::<Context>().ok_or(Error::ReadContext)?;
     let secret = context.settings.auth.secret.as_str();
+    debug!("secret: {:?}", secret);
     let token_data =
       token::decode(bearer.token(), secret).map_err(|_| AuthenticateError::InvalidToken)?;
     debug!("token_data: {:?}", token_data);
