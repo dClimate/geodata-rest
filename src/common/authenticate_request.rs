@@ -6,14 +6,14 @@ use axum::{
 use http::Extensions;
 use tracing::debug;
 
-use crate::context::Context;
-use crate::errors::AuthenticateError;
-use crate::errors::Error;
 use crate::common::token;
 use crate::common::token::TokenAccount;
 use crate::common::token::ADMIN_PATH;
 use crate::common::token::USER_PATH;
 use crate::common::token::VALIDATOR_PATH;
+use crate::context::Context;
+use crate::errors::AuthenticateError;
+use crate::errors::Error;
 
 #[async_trait]
 impl<B> FromRequest<B> for TokenAccount
@@ -27,38 +27,50 @@ where
       TypedHeader::<Authorization<Bearer>>::from_request(req)
         .await
         .map_err(|_| AuthenticateError::InvalidToken)?;
-    debug!("from_request");
-    let extensions = req.extensions().ok_or(Error::ReadContext)?;
+    let extensions = req.extensions();
 
-    // axum 5.1 breaking
-    // let extensions = req.extensions().get::<Extensions>().ok_or(Error::ReadContext)?;
-    debug!("extensions: {:?}", extensions);
     let context = extensions.get::<Context>().ok_or(Error::ReadContext)?;
     let secret = context.settings.auth.secret.as_str();
-    debug!("secret: {:?}", secret);
     let token_data =
       token::decode(bearer.token(), secret).map_err(|_| AuthenticateError::InvalidToken)?;
-    debug!("token_data: {:?}", token_data);
 
     match &req.uri().path()[..7] {
       ADMIN_PATH => {
         debug!("admin request");
-        if !token_data.claims.account.roles.iter().any(|i| i.name == "admin") {
+        if !token_data
+          .claims
+          .account
+          .roles
+          .iter()
+          .any(|i| i.name == "admin")
+        {
           return Err(Error::Authenticate(AuthenticateError::WrongCredentials));
         }
-      },
+      }
       USER_PATH => {
         debug!("user request");
-        if !token_data.claims.account.roles.iter().any(|i| i.name == "user") {
+        if !token_data
+          .claims
+          .account
+          .roles
+          .iter()
+          .any(|i| i.name == "user")
+        {
           return Err(Error::Authenticate(AuthenticateError::WrongCredentials));
         }
-      },
+      }
       VALIDATOR_PATH => {
         debug!("validator request");
-        if !token_data.claims.account.roles.iter().any(|i| i.name == "validator") {
+        if !token_data
+          .claims
+          .account
+          .roles
+          .iter()
+          .any(|i| i.name == "validator")
+        {
           return Err(Error::Authenticate(AuthenticateError::WrongCredentials));
         }
-      },
+      }
       _ => debug!("unprotected request"),
     }
 

@@ -14,11 +14,11 @@ serde_derive = "1.0.136"
 wither = { git = "https://github.com/thedodd/wither" }
 futures = "0.3.21"
 thiserror = "1.0.30"
-axum = { version = "0.4", features = ["headers"] }
+axum = { version = "0.5", features = ["headers"] }
 tokio = { version = "1.17.0", features = ["full"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
-tower-http = { version = "0.2.3", features = ["trace", "compression-br", "propagate-header", "sensitive-headers"] }
+tower-http = { version = "0.2.5", features = ["trace", "compression-br", "propagate-header", "sensitive-headers"] }
 http = "0.2.6"
 chrono = "0.4.19"
 async-trait = "0.1"
