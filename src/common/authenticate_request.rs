@@ -3,7 +3,6 @@ use axum::{
   extract::{FromRequest, RequestParts, TypedHeader},
   headers::{authorization::Bearer, Authorization},
 };
-use http::Extensions;
 use tracing::debug;
 
 use crate::common::token;
