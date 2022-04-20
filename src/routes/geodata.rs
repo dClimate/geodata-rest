@@ -11,6 +11,7 @@ use axum::{
   routing::{get, post},
   Json, Router,
 };
+use axum_macros::debug_handler;
 use bson::doc;
 use serde::{Deserialize, Serialize};
 use tracing::debug;
@@ -36,6 +37,7 @@ pub fn create_route() -> Router {
     .route(&get_geodata_near_path, get(get_geodata_near))
 }
 
+#[debug_handler]
 async fn create_geodata(
   account: TokenAccount,
   Extension(context): Extension<Context>,
@@ -63,7 +65,7 @@ async fn create_geodata(
   let nanos: u64 = geodata.created.to_chrono().timestamp_nanos() as u64;
 
   // anchor
-  let result = anchor::anchor_geodata(
+  anchor::anchor_geodata(
     geodata_id,
     &account_id,
     &anchor_hash,

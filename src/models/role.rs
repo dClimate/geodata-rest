@@ -38,6 +38,7 @@ pub struct Role {
   pub created_at: Date,
 }
 
+#[allow (dead_code)]
 impl Role {
   pub fn new(name: String) -> Self {
     let now = date::now();

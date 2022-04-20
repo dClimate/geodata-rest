@@ -23,7 +23,6 @@ use tower_http::{
 
 mod common;
 use common::*;
-use tracing::debug;
 
 #[allow(dead_code)]
 fn app(context: Context) -> Router {
@@ -127,6 +126,24 @@ mod tests {
     let admin_token = res.access_token;
     let admin_id = res.account.id;
 
+    let docker_args: [&str; 12] = [
+      "-d",
+      "-e",
+      "STAKE_TOKEN=ujunox",
+      "-e",
+      "UNSAFE_CORS=true",
+      "-p",
+      "26656:26656",
+      "-p",
+      "26657:26657",
+      "ghcr.io/cosmoscontracts/juno:v2.3.1",
+      "./setup_and_run.sh",
+      "juno16g2rahf5846rxzp3fwlswy08fz8ccuwk03k57y",
+    ];
+    // start juno docker container
+    let container_id = exec_docker_command("run", docker_args);
+    poll_for_first_block().await;
+    
     // build post /geodata request body
     let geometry = Geometry {
       r#type: "Point".to_string(),
@@ -328,6 +345,7 @@ mod tests {
       validations[0].validities[0].hash,
       validations[0].validities[1].hash
     );
+    exec_docker_command("kill", &[&container_id]);
   }
 }
 

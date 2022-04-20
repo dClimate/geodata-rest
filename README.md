@@ -2,9 +2,15 @@
 
 ### Requirements
 
-- [Rust](https://www.rust-lang.org/tools/install)
-- [MongoDB](https://docs.mongodb.com/manual/installation/)
+* [Rust](https://www.rust-lang.org/tools/install)
+* [MongoDB](https://docs.mongodb.com/manual/installation/)
+* [Docker](https://www.docker.com/) (for integration test)
+### development
 
+* run tests:
+```sh
+cargo test
+```
 ### Features
 
 * Role-based jsonwebtoken authentication.
@@ -13,19 +19,28 @@
 * Error handling
 * [Polymorphic](https://docs.mongodb.com/manual/reference/geojson/#geometrycollection) [geospatial data and queries](https://docs.mongodb.com/manual/geospatial-queries/#geospatial-queries)  on [Mongodb Atlas](https://www.mongodb.com/atlas/database) with Replica Set support
 * Data validation based on keccak-256 hashing, anchored on blockchain
-* Contract messaging via [cosmrs](https://github.com/cosmos/cosmos-rust) (WIP)
+* Contract messaging via [cosmrs](https://github.com/cosmos/cosmos-rust)
+* Full integration test coverage
 
 ### Diagram
 
 ![diagram](./assets/diagram.png)
 
 ### Dev
-* IMPORTANT: $CONTRACT_ADDRESS from geodata-anchor scripts/local_deploy.sh must be applied to src/config/default.json before starting
- (see https://github.com/tsondru/geodata-anchor/README.md)
+* For [contract](https://github.com/dclimate/geodata-anchor) changes, copy msg.rs and geodata_anchor.wasm from contract to common directory, e.g.: 'cp ../geodata-anchor/src/msg.rs common' and 'cp ../geodata-anchor/artifacts/geodata_anchor.wasm assets'
+* With a connected testnet, the deployed contract address would be supplied via config/default.json. Currently the integration test is running juno via docker and supplies the contract address via env variable.
+* To supply private credentials for Mongodb Atlas cluster overriding the default localhost instance, add config/local.json (included in .gitignore). Sample:
+  {
+    "database": {
+      "uri": "mongodb+srv://xxxxxxcluster0.xxxx.mongodb.net",
+      "name": "geomancy"
+    },
+  
+    "auth": {
+      "secret": "xxxxxx"
+    }
+  }
 * see README-dev.md for running dev curl commands
-
-### TODO:
-* Complete create_msg/send_msg to contract from src/routes/geodata/create_geodata and test
 
 ### Next steps:
 * Consider replacing bcrypt with argon2

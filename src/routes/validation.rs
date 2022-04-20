@@ -5,13 +5,13 @@ use crate::models::geodata;
 use crate::models::geodata::{HashableGeodata};
 use crate::models::validation::{ValidationResult, ValidationResults, Validation, Validity};
 use crate::common::models::ModelExt;
+use crate::common::anchor;
 use axum::{
   extract::{Extension},
   routing::get,
   Json, Router,
 };
 use bson::doc;
-use tracing::debug;
 use wither::mongodb::options::FindOptions;
 
 use crate::common::token::VALIDATOR_PATH;
@@ -51,6 +51,7 @@ async fn query_validation(
     validation.validities.push(validity);
 
     let v_result = ValidationResult::new(account.id, validation.geodata, hash == validation.validities[0].hash);
+    let succeeded = v_result.validated;
     v_results.results.push(v_result);
     let v_doc = bson::to_document(&validation).unwrap();
     let validation = context
@@ -62,10 +63,17 @@ async fn query_validation(
     )
     .await?
     .map(Validation::from);
-    debug!("validation: {:?}", &validation);
-
+    if succeeded {
+      let nanos: u64 = geodata.unwrap().created.to_chrono().timestamp_nanos() as u64;
+      anchor::validate_geodata(
+        &validation.unwrap().geodata.to_hex(),
+        &account.id.to_hex(),
+        &hash,
+        nanos,
+      )
+      .await?;
+    }   
   }
 
-  debug!("Returning validation results");
   Ok(Json(v_results))
 }

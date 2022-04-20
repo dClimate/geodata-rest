@@ -1,7 +1,16 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use cosmwasm_std::Timestamp;
+use cosmwasm_std::{Addr, Binary, Timestamp};
+
+// TODO: refactor to common
+#[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
+pub struct Validation {
+    pub account: String,
+    pub hash: Binary,
+    pub source: Addr,
+    pub created: Timestamp,
+}
 
 /// TODO: implement access control based on admins and users
 /// admins can instatiate and modify access lists, if mutable
@@ -19,6 +28,7 @@ pub struct InstantiateMsg {
 #[serde(rename_all = "snake_case")]
 pub enum ExecuteMsg {
     Create(CreateMsg),
+    Validate(ValidateMsg),
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -32,7 +42,19 @@ pub struct CreateMsg {
     /// geodata created
     pub created: Timestamp,
 }
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct ValidateMsg {
+    /// hex of geodata objectid (PK)
+    pub id: String,
+    /// hex of account objectid
+    pub account: String,
+    /// hex-encoded hash of geodata (must be 32*2 = 64 chars)
+    pub hash: String,
+    /// validation created
+    pub created: Timestamp,
+}
 
+#[allow (dead_code)]
 pub fn is_valid_id(id: &str) -> bool {
     id.as_bytes().len() == 24
 }
@@ -54,5 +76,5 @@ pub struct DetailsResponse {
     pub hash: String,
     pub source: String,
     pub created: Timestamp,
+    pub validations: Vec<Validation>,
 }
-
