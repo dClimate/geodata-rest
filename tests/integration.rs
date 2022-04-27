@@ -4,7 +4,7 @@
 //! Admin authenticates and creates geodata instance
 //! User authenticates and queries all geodata then issues a "near" query
 //! Validator authenticates and runs validation
-use axum::{extract::Extension, Router};
+use axum::{extract::Extension, http::header, Router};
 use bson::{doc, oid::ObjectId};
 use geodata_rest::common::models::ModelExt;
 use geodata_rest::common::token::{ADMIN_PATH, USER_PATH, VALIDATOR_PATH};
@@ -14,7 +14,6 @@ use geodata_rest::models::account::PublicAccount;
 use geodata_rest::models::geodata::{Geometry, Location, PublicGeodata};
 use geodata_rest::models::validation::ValidationResults;
 use geodata_rest::routes;
-use http::header;
 use serde::{Deserialize, Serialize};
 use tower_http::{
   compression::CompressionLayer, propagate_header::PropagateHeaderLayer,

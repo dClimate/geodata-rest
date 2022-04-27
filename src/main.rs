@@ -1,6 +1,6 @@
 use axum::extract::Extension;
 use axum::{handler::Handler, http::StatusCode, response::IntoResponse, Router};
-use http::header;
+use axum::http::header;
 use std::net::SocketAddr;
 use tower_http::{
   compression::CompressionLayer, propagate_header::PropagateHeaderLayer,
