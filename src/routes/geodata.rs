@@ -58,6 +58,7 @@ async fn create_geodata(
 
   let hashable = HashableGeodata::from(geodata.clone());
   let j_hashable = serde_json::to_string(&hashable).unwrap();
+  debug!("hashable: {}", j_hashable);
   let hash = geodata::hash_data(j_hashable).await?;
 
   let anchor_hash = hash.clone();

@@ -1,6 +1,7 @@
 use crate::context::Context;
 use crate::errors::Error;
 use crate::common::token::TokenAccount;
+use crate::common::date;
 use crate::models::geodata;
 use crate::models::geodata::{HashableGeodata};
 use crate::models::validation::{ValidationResult, ValidationResults, Validation, Validity};
@@ -64,7 +65,7 @@ async fn query_validation(
     .await?
     .map(Validation::from);
     if succeeded {
-      let nanos: u64 = geodata.unwrap().created.to_chrono().timestamp_nanos() as u64;
+      let nanos: u64 = date::now().to_chrono().timestamp_nanos() as u64;
       anchor::validate_geodata(
         &validation.unwrap().geodata.to_hex(),
         &account.id.to_hex(),

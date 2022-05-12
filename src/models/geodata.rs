@@ -7,10 +7,9 @@ use wither::bson::{doc, oid::ObjectId};
 use wither::Model as WitherModel;
 
 use crate::database::Database;
-use crate::common::date;
 use crate::common::hasher;
 use crate::errors::Error;
-use crate::common::date::Date;
+use crate::common::date::{self, Date};
 use crate::common::models::ModelExt;
 
 #[derive(Clone)]
@@ -119,8 +118,6 @@ pub struct HashableGeodata {
   pub value: f64,
   pub source: String,
   pub quality: i32,
-  #[serde(with = "bson_datetime_as_rfc3339_string")]
-  pub created: Date,
 }
 
 impl From<Geodata> for HashableGeodata {
@@ -131,7 +128,6 @@ impl From<Geodata> for HashableGeodata {
       value: geodata.value.clone(),
       source: geodata.source.clone(),
       quality: geodata.quality.clone(),
-      created: geodata.created,
     }
   }
 }
