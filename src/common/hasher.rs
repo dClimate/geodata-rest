@@ -1,8 +1,8 @@
 use base16ct;
-use sha3::{Digest, Sha3_256};
+use sha3::{Digest, Keccak256};
 
 pub fn hash(data: &str) -> String {
-  let mut hasher = Sha3_256::new();
+  let mut hasher = Keccak256::new();
   hasher.update(data);
 
   let result = hasher.finalize_reset();
